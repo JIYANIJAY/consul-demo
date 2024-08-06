@@ -1,0 +1,121 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.0.6'
+	id 'io.spring.dependency-management' version '1.1.0'
+	id("org.sonarqube") version "4.0.0.2929"
+	id "jacoco"
+}
+
+group = 'com.campaign'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '19'
+
+repositories {
+//	maven {
+//		allowInsecureProtocol true
+//		url System.getenv("NEXUS_URL") + "repository/"+System.getenv("SPRING_PROFILES_ACTIVE")+"-campaign-group/"
+//		authentication {
+//			basic(BasicAuthentication) {
+//				credentials {
+//					username = System.getenv("NEXUS_CREDENTIALS_USERNAME")
+//					password = System.getenv("NEXUS_CREDENTIALS_PASSWORD")
+//				}
+//			}
+//		}
+//	}
+	maven {
+		allowInsecureProtocol true
+		url "http://localhost:8081/repository/campaign-group/"
+//		url System.getenv("NEXUS_URL") + "repository/campaign-group/"
+		authentication {
+			basic(org.gradle.authentication.http.BasicAuthentication) {
+				credentials {
+					username = "admin"
+					password = "admin"
+//					username = System.getenv("NEXUS_CREDENTIALS_USERNAME")
+//					password = System.getenv("NEXUS_CREDENTIALS_PASSWORD")
+				}
+			}
+		}
+	}
+}
+configurations.all {
+	resolutionStrategy.cacheDynamicVersionsFor(0, 'seconds')
+	resolutionStrategy.cacheChangingModulesFor(0, 'seconds')
+}
+
+ext {
+	set('springCloudAzureVersion', "5.1.0")
+	set('springCloudVersion', "2022.0.3")
+	set('commonSnapshotVersion', System.getenv("COMMON_SNAPSHOT_VERSION"))
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.cloud:spring-cloud-starter-consul-discovery'
+	implementation 'org.springframework.cloud:spring-cloud-starter-config:4.0.1'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.cloud:spring-cloud-starter-bootstrap:4.0.1'
+
+
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+
+dependencyManagement {
+	imports {
+		mavenBom "com.azure.spring:spring-cloud-azure-dependencies:${springCloudAzureVersion}"
+		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+	}
+}
+def props = new Properties()
+file("sonar-config.properties").withInputStream { props.load(it) }
+//def skipSonar = System.getenv("SKIP_SONAR_VALIDATION")
+
+sonar {
+	//if System.getenv("SKIP_SONAR_VALIDATION") null than set skipProject true for skipping sonar test
+//	skipProject= (skipSonar != null && !(skipSonar.isBlank())) ? skipSonar?.toBoolean() : true
+	properties {
+		property("sonar.projectKey", "campaign-auth")
+		property("sonar.host.url", "http://192.168.0.193:9000")
+		property("sonar.login", "sqp_57c1d06ca7c4459a491f08e1cc1ba003afb92138")
+		property("sonar.qualitygate.wait", props.getProperty("sonar.wait.flag"))
+	}
+}
+jacocoTestReport {
+	reports {
+		xml.required = true
+	}
+	afterEvaluate {
+		classDirectories = files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: [
+					'com/campaign/config/**',
+					'com/campaign/constant/**',
+					'com/campaign/dtos/**',
+					'com/campaign/entity/**',
+					'com/campaign/kafka/**',
+					'com/campaign/redis/**',
+					'com/campaign/repository/**',
+					'com/campaign/security/**',
+					'com/campaign/dao/impl/**',
+					'com/campaign/cache/util/**',
+					'com/campaign/util/**'
+			])
+		})
+	}
+}
+test.finalizedBy jacocoTestReport
+
+tasks.named('sonar').configure {
+	dependsOn test
+}
+tasks.named('build'){
+	dependsOn 'sonar' // Add SonarQube analysis as a dependency of the build task
+}
+tasks.named('bootRun'){
+	dependsOn 'sonar' // Add SonarQube analysis as a dependency of the build task
+}
+tasks.named('test') {
+	useJUnitPlatform()
+}

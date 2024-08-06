@@ -1,0 +1,15 @@
+server:
+  port: 9071
+  servlet:
+    context-path: /campaign-auth
+
+spring:
+  cloud:
+    consul:
+      host: localhost
+      port: 8500
+      discovery:
+        instance-id: ${spring.application.name} + ${random.value}
+        healthCheckPath: ${server.servlet.context-path}/actuator/health
+        serviceName: campaign-auth
+        prefer-ip-address: true

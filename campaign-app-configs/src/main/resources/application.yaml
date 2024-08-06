@@ -1,0 +1,44 @@
+server:
+  port: 9091
+  servlet:
+    context-path: /${CONFIG_CONTEXT_PATH}
+
+spring:
+  application:
+    name: campaign-app-configs
+  profiles:
+    include:
+      - native
+      - ${SPRING_PROFILES_ACTIVE}
+
+  cloud:
+    config:
+      server:
+        native:
+          search-locations:
+            - classpath:/config
+            - classpath:/config/campaign-action-cards/
+            - classpath:/config/campaign-analytics/
+            - classpath:/config/campaign-categorization/
+            - classpath:/config/campaign-auth/
+            - classpath:/config/campaign-notification/
+            - classpath:/config/campaign-survey/
+            - classpath:/config/campaign-service/
+            - classpath:/config/campaign-action-cards/
+            - classpath:/config/campaign-document/
+            - classpath:/config/campaign-api-gateway/
+            - classpath:/config/campaign-batch/
+            - classpath:/config/campaign-notification/
+            - classpath:/config/campaign-payment/
+    consul:
+      host: ${CONSUL_HOST_NAME}
+      port: ${CONSUL_PORT}
+      discovery:
+        instance-id: ${spring.application.name} + ${random.value}
+        healthCheckPath: ${server.servlet.context-path}/actuator/health
+        serviceName: ${CONFIG_CONTEXT_PATH}
+        prefer-ip-address: true
+#management:
+#  security:
+#    enabled: false
+
